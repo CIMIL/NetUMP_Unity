@@ -44,7 +44,7 @@ set(NETUMP_SOURCES
 
 # Unity wrapper source files
 set(WRAPPER_SOURCES
-    ${WRAPPER_ROOT}/netump_unity_wrapper.cpp
+    ${WRAPPER_ROOT}/NetUMPWrapper.cpp
 )
 
 # Create shared library
