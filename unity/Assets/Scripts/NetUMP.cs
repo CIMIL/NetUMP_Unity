@@ -105,7 +105,7 @@ namespace NetUMP
 
         #region Private Fields
 
-        private IntPtr nativeHandle = IntPtr.Zero;
+        private IntPtr nativeLocalInstance = IntPtr.Zero;
         private bool isRunning = false;
         private byte[] receiveBuffer = new byte[16]; // Max UMP message size
 
@@ -136,14 +136,14 @@ namespace NetUMP
 
         private void Update()
         {
-            if (nativeHandle == IntPtr.Zero)
+            if (nativeLocalInstance == IntPtr.Zero)
                 return;
 
             // Poll for messages from the native queue
-            int messageCount = NetUMP_PollMessages(nativeHandle);
+            int messageCount = NetUMP_PollMessages(nativeLocalInstance);
             for (int i = 0; i < messageCount; i++)
             {
-                int length = NetUMP_GetNextMessage(nativeHandle, receiveBuffer, receiveBuffer.Length);
+                int length = NetUMP_GetNextMessage(nativeLocalInstance, receiveBuffer, receiveBuffer.Length);
                 if (length > 0)
                 {
                     byte[] message = new byte[length];
@@ -153,7 +153,7 @@ namespace NetUMP
             }
 
             // Check for connection loss
-            if (NetUMP_ReadAndResetConnectionLost(nativeHandle))
+            if (NetUMP_ReadAndResetConnectionLost(nativeLocalInstance))
             {
                 Debug.LogWarning($"[{gameObject.name}] NetUMP: Connection lost");
                 OnDisconnected?.Invoke();
@@ -179,7 +179,7 @@ namespace NetUMP
         /// </summary>
         public bool Initialize()
         {
-            if (nativeHandle != IntPtr.Zero)
+            if (nativeLocalInstance != IntPtr.Zero)
             {
                 Debug.LogWarning($"[{gameObject.name}] NetUMP: Already initialized");
                 return true;
@@ -188,23 +188,23 @@ namespace NetUMP
             Debug.Log($"[{gameObject.name}] NetUMP: Creating instance");
 
             // Create native instance
-            nativeHandle = NetUMP_Create(localEndpointName, productInstanceId);
-            if (nativeHandle == IntPtr.Zero)
+            nativeLocalInstance = NetUMP_Create(localEndpointName, productInstanceId);
+            if (nativeLocalInstance == IntPtr.Zero)
             {
                 Debug.LogError($"[{gameObject.name}] NetUMP: Failed to create native instance");
                 return false;
             }
 
             // Set native callbacks
-            NetUMP_SetMessageCallback(nativeHandle, messageCallbackDelegate);
-            NetUMP_SetConnectionCallback(nativeHandle, connectionCallbackDelegate);
-            NetUMP_SetDisconnectionCallback(nativeHandle, disconnectionCallbackDelegate);
+            NetUMP_SetMessageCallback(nativeLocalInstance, messageCallbackDelegate);
+            NetUMP_SetConnectionCallback(nativeLocalInstance, connectionCallbackDelegate);
+            NetUMP_SetDisconnectionCallback(nativeLocalInstance, disconnectionCallbackDelegate);
 
             Debug.Log($"[{gameObject.name}] NetUMP: Starting connection to {remoteHost}:{remotePort}");
 
             // Start session
             int result = NetUMP_Start(
-                nativeHandle,
+                nativeLocalInstance,
                 remoteHost,
                 localPort,
                 remotePort,
@@ -213,8 +213,8 @@ namespace NetUMP
             if (result < 0)
             {
                 Debug.LogError($"[{gameObject.name}] NetUMP: Start failed with code {result}");
-                NetUMP_Destroy(nativeHandle);
-                nativeHandle = IntPtr.Zero;
+                NetUMP_Destroy(nativeLocalInstance);
+                nativeLocalInstance = IntPtr.Zero;
                 return false;
             }
 
@@ -228,19 +228,19 @@ namespace NetUMP
         /// </summary>
         public void Shutdown()
         {
-            if (nativeHandle == IntPtr.Zero)
+            if (nativeLocalInstance == IntPtr.Zero)
                 return;
 
             Debug.Log($"[{gameObject.name}] NetUMP: Shutting down");
 
             if (isRunning)
             {
-                NetUMP_Stop(nativeHandle);
+                NetUMP_Stop(nativeLocalInstance);
                 isRunning = false;
             }
 
-            NetUMP_Destroy(nativeHandle);
-            nativeHandle = IntPtr.Zero;
+            NetUMP_Destroy(nativeLocalInstance);
+            nativeLocalInstance = IntPtr.Zero;
         }
 
         /// <summary>
@@ -248,17 +248,17 @@ namespace NetUMP
         /// </summary>
         public bool Restart()
         {
-            if (nativeHandle == IntPtr.Zero)
+            if (nativeLocalInstance == IntPtr.Zero)
             {
                 return Initialize();
             }
 
             Debug.Log($"[{gameObject.name}] NetUMP: Restarting connection");
 
-            NetUMP_Stop(nativeHandle);
+            NetUMP_Stop(nativeLocalInstance);
 
             int result = NetUMP_Start(
-                nativeHandle,
+                nativeLocalInstance,
                 remoteHost,
                 localPort,
                 remotePort,
@@ -281,7 +281,7 @@ namespace NetUMP
         /// <returns>True if message was queued successfully</returns>
         public bool SendUMP(byte[] data)
         {
-            if (nativeHandle == IntPtr.Zero)
+            if (nativeLocalInstance == IntPtr.Zero)
             {
                 Debug.LogWarning($"[{gameObject.name}] NetUMP: Cannot send - not initialized");
                 return false;
@@ -293,16 +293,16 @@ namespace NetUMP
                 return false;
             }
 
-            return NetUMP_SendUMP(nativeHandle, data, data.Length);
+            return NetUMP_SendUMP(nativeLocalInstance, data, data.Length);
         }
 
         /// <summary>
         /// Get current session status
         /// </summary>
-        /// <returns>0=closed, 1=inviting, 2=waiting, 3=opened</returns>
+        /// <returns>0=closed, 1=inviting, 3=opened</returns>
         public int GetSessionStatus()
         {
-            return (nativeHandle != IntPtr.Zero) ? NetUMP_GetSessionStatus(nativeHandle) : 0;
+            return (nativeLocalInstance != IntPtr.Zero) ? NetUMP_GetSessionStatus(nativeLocalInstance) : 0;
         }
 
         /// <summary>
@@ -314,7 +314,6 @@ namespace NetUMP
             {
                 case 0: return "Closed";
                 case 1: return "Inviting";
-                case 2: return "Waiting";
                 case 3: return "Opened";
                 default: return "Unknown";
             }
@@ -323,7 +322,7 @@ namespace NetUMP
         /// <summary>
         /// Check if this instance is initialized
         /// </summary>
-        public bool IsInitialized => nativeHandle != IntPtr.Zero;
+        public bool IsInitialized => nativeLocalInstance != IntPtr.Zero;
 
         /// <summary>
         /// Check if session is running
@@ -337,7 +336,7 @@ namespace NetUMP
         private void OnNativeMessageReceived(IntPtr instance, IntPtr data, int length)
         {
             // Verify this callback is for our instance
-            if (instance != nativeHandle)
+            if (instance != nativeLocalInstance)
                 return;
 
             // This is called from native thread - do minimal work
@@ -347,7 +346,7 @@ namespace NetUMP
         private void OnNativeConnected(IntPtr instance, IntPtr endpointName, int nameLength)
         {
             // Verify this callback is for our instance
-            if (instance != nativeHandle)
+            if (instance != nativeLocalInstance)
                 return;
 
             try
@@ -367,7 +366,7 @@ namespace NetUMP
         private void OnNativeDisconnected(IntPtr instance)
         {
             // Verify this callback is for our instance
-            if (instance != nativeHandle)
+            if (instance != nativeLocalInstance)
                 return;
 
             Debug.Log($"[{gameObject.name}] NetUMP: Disconnected");
