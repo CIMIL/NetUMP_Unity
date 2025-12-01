@@ -119,12 +119,12 @@ void NativeDisconnectionCallback(NetUMPWrapper *wrapper)
 // Session thread that calls RunSession every 1ms
 void SessionThread(NetUMPWrapper *wrapper)
 {
-    using clock = std::chrono::steady_clock;
-    auto nextTime = clock::now();
+    // using clock = std::chrono::steady_clock;
+    // auto nextTime = clock::now();
 
     while (wrapper->running.load(std::memory_order_acquire))
     {
-        nextTime += std::chrono::milliseconds(1);
+        // nextTime += std::chrono::milliseconds(1);
 
         if (wrapper->handler)
         {
@@ -132,7 +132,8 @@ void SessionThread(NetUMPWrapper *wrapper)
         }
 
         // Sleep until next iteration
-        std::this_thread::sleep_until(nextTime);
+        // std::this_thread::sleep_until(nextTime);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
