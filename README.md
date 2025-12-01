@@ -1,5 +1,11 @@
 # NetUMP_Unity
 
+## TODOs
+
+- [ ] Add the option to modify the localPort, destPort, etc. NetUMP parameters directly from the Unity editor.
+- [ ] Examples and tests.
+
+
 
 ## Building the NetUMP Native Plugin Libraries
 
