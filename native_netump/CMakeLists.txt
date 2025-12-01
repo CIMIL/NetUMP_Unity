@@ -132,10 +132,10 @@ endif()
 
 
 # Output name (without lib prefix on all platforms for Unity compatibility)
-set_target_properties(netump PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME "netump"
-)
+# set_target_properties(netump PROPERTIES
+#     PREFIX ""
+#     OUTPUT_NAME "netump"
+# )
 
 # Install rules (optional)
 install(TARGETS netump

@@ -62,8 +62,8 @@ ScriptAssemblies/
 # generic build output folders
 bin/
 build/
-build_Debug/
-build_Release/
+build_*_Debug/
+build_*_Release/
 out/
 dist/
 
