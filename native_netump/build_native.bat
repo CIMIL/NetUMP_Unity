@@ -84,22 +84,26 @@ if !BUILD_ANDROID! == 1 (
 
 REM === Build Windows ===
 if !BUILD_WINDOWS! == 1 (
-    echo Building Windows x64...
+    echo Building Windows...
 
     set "BUILD_DIR=build_windows_!BUILD_TYPE!"
     if not exist "!BUILD_DIR!" mkdir "!BUILD_DIR!"
     pushd "!BUILD_DIR!"
 
-    cmake -G "Ninja" -DCMAKE_BUILD_TYPE=!BUILD_TYPE! -A x64 "%SRC_DIR%"
+    REM Configure with Visual Studio generator for x64
+    cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=!BUILD_TYPE! "%SRC_DIR%"
 
-    ninja netump
+    REM Build the netump target (release/debug)
+    cmake --build . --config !BUILD_TYPE! --target netump
 
+    REM Create plugin directory if not exists
     if not exist "%WINDOWS_PLUGIN_DIR%" mkdir "%WINDOWS_PLUGIN_DIR%"
 
-    if exist netump.dll (
-        copy /Y netump.dll "%WINDOWS_PLUGIN_DIR%\netump.dll"
+    REM Copy built DLL (Visual Studio places output in config directory)
+    if exist "!BUILD_TYPE!\netump.dll" (
+        copy /Y "!BUILD_TYPE!\netump.dll" "%WINDOWS_PLUGIN_DIR%\netump.dll"
     ) else (
-        echo ERROR: netump.dll not found in !BUILD_DIR!
+        echo ERROR: netump.dll not found in !BUILD_DIR!\!BUILD_TYPE!
         pause
     )
 

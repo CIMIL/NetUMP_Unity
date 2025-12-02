@@ -2,13 +2,18 @@ cmake_minimum_required(VERSION 3.10)
 project(netump_unity)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Suppress MSVC CRT security warnings (strcpy/strncpy)
+if(WIN32)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 # Add platform-specific target defines as required by NetUMP
 if(ANDROID)
-    add_definitions(-DLINUX)      # Keep existing Android Linux socket API define
+    add_definitions(-DLINUX)        # Keep existing Android Linux socket API define
     add_definitions(-DANDROID)
     add_definitions(-D__TARGET_LINUX__)  # Android treated as Linux platform
 elseif(UNIX AND NOT APPLE)
@@ -40,7 +45,7 @@ set(NETUMP_SOURCES
     ${NETUMP_ROOT}/NetUMP_SessionProtocol.cpp
     ${NETUMP_ROOT}/network.cpp
     ${NETUMP_ROOT}/SystemSleep.cpp
-    )
+)
 
 # Unity wrapper source files
 set(WRAPPER_SOURCES
@@ -100,6 +105,12 @@ elseif(WIN32)
     
     # Set proper Windows DLL export/import
     target_compile_definitions(netump PRIVATE BUILDING_DLL)
+    
+    # Unity plugin: no lib prefix, just "netump.dll"
+    set_target_properties(netump PROPERTIES
+        PREFIX ""
+        OUTPUT_NAME "netump"
+    )
 endif()
 
 # Compiler warnings
@@ -129,13 +140,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_options(netump PRIVATE -g)
     endif()
 endif()
-
-
-# Output name (without lib prefix on all platforms for Unity compatibility)
-# set_target_properties(netump PROPERTIES
-#     PREFIX ""
-#     OUTPUT_NAME "netump"
-# )
 
 # Install rules (optional)
 install(TARGETS netump
