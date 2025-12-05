@@ -27,6 +27,7 @@ where `{Platform}` is one of `Android`, `Windows`, `Linux`, or `Apple`.
 
 - **Android NDK** installed and `ANDROID_NDK` environment variable set.
 - **CMake** and **Ninja** installed and available in your system PATH.
+- **MSBuild** installed and available in your system PATH.
 
 ---
 

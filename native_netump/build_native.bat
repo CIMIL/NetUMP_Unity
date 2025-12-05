@@ -84,7 +84,7 @@ if !BUILD_ANDROID! == 1 (
 
 REM === Build Windows ===
 if !BUILD_WINDOWS! == 1 (
-    echo Building Windows...
+    echo Building Windows x64...
 
     set "BUILD_DIR=build_windows_!BUILD_TYPE!"
     if not exist "!BUILD_DIR!" mkdir "!BUILD_DIR!"
@@ -143,7 +143,7 @@ if !BUILD_APPLE! == 1 (
     pushd "!BUILD_DIR!"
 
     cmake -G Ninja -DCMAKE_BUILD_TYPE=!BUILD_TYPE! ^
-          -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64 ^
+          -DCMAKE_OSX_ARCHITECTURES=arm64 ^
           "%SRC_DIR%"
 
     ninja netump

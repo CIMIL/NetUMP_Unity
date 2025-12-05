@@ -5,7 +5,7 @@ using NetUMP;
 /// Example usage of NetUMP in Unity
 /// Demonstrates sending and receiving MIDI 2.0 UMP messages
 /// </summary>
-public class NetUMPExample : MonoBehaviour
+public class NetUMPFirstTest : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private NetUMPWrapper netUMP;
@@ -112,29 +112,25 @@ public class NetUMPExample : MonoBehaviour
     /// </summary>
     public void SendNoteOn(byte channel, byte note, byte velocity)
     {
-        // MIDI 2.0 Channel Voice Message (64-bit / 2 words)
-        // MT=4, Group=0, Status=0x9 (Note On)
         byte[] ump = new byte[8];
-        
-        uint word1 = 0x40000000 | // MT = 4
-                     ((uint)channel << 16) | // Channel
-                     (0x90 << 8) | // Note On status
-                     note; // Note number
-        
-        // For MIDI 2.0, velocity is 16-bit
-        uint word2 = ((uint)velocity << 9); // Scale 7-bit to 16-bit
-        
-        System.BitConverter.GetBytes(word1).CopyTo(ump, 0);
-        System.BitConverter.GetBytes(word2).CopyTo(ump, 4);
+
+        uint word1 = (4u << 28)          // MT = 4 (MIDI 2.0 Channel Voice)
+                | (0u << 24)          // Group = 0 (can be changed if needed)
+                | (0x9u << 20)        // Message Type = Note On (9)
+                | ((uint)channel << 16) // Channel (0-15)
+                | note;               // Note number (0-127)
+
+        // Scale velocity from 7-bit to 16-bit by replicating bits:
+        ushort velocity16 = (ushort)(velocity * 0x101);
+        uint word2 = velocity16;         // Velocity in bits 0-15; rest 0
+
+        BitConverter.GetBytes(word1).CopyTo(ump, 0);
+        BitConverter.GetBytes(word2).CopyTo(ump, 4);
 
         if (netUMP.SendUMP(ump))
-        {
             Debug.Log($"Sent Note On: Ch={channel}, Note={note}, Vel={velocity}");
-        }
         else
-        {
             Debug.LogWarning("Failed to send Note On");
-        }
     }
 
     /// <summary>
@@ -142,28 +138,23 @@ public class NetUMPExample : MonoBehaviour
     /// </summary>
     public void SendNoteOff(byte channel, byte note)
     {
-        // MIDI 2.0 Channel Voice Message (64-bit / 2 words)
-        // MT=4, Group=0, Status=0x8 (Note Off)
         byte[] ump = new byte[8];
-        
-        uint word1 = 0x40000000 | // MT = 4
-                     ((uint)channel << 16) | // Channel
-                     (0x80 << 8) | // Note Off status
-                     note; // Note number
-        
-        uint word2 = 0; // Velocity = 0 for note off
-        
-        System.BitConverter.GetBytes(word1).CopyTo(ump, 0);
-        System.BitConverter.GetBytes(word2).CopyTo(ump, 4);
+
+        uint word1 = (4u << 28)          // MT = 4
+                | (0u << 24)          // Group = 0
+                | (0x8u << 20)        // Message Type = Note Off (8)
+                | ((uint)channel << 16)
+                | note;
+
+        uint word2 = 0;                 // Velocity = 0 for Note Off
+
+        BitConverter.GetBytes(word1).CopyTo(ump, 0);
+        BitConverter.GetBytes(word2).CopyTo(ump, 4);
 
         if (netUMP.SendUMP(ump))
-        {
             Debug.Log($"Sent Note Off: Ch={channel}, Note={note}");
-        }
         else
-        {
             Debug.LogWarning("Failed to send Note Off");
-        }
     }
 
     /// <summary>
@@ -172,19 +163,24 @@ public class NetUMPExample : MonoBehaviour
     public void SendControlChange(byte channel, byte controller, uint value)
     {
         byte[] ump = new byte[8];
-        
-        uint word1 = 0x40000000 | // MT = 4
-                     ((uint)channel << 16) | // Channel
-                     (0xB0 << 8) | // Control Change status
-                     controller; // Controller number
-        
-        uint word2 = value; // 32-bit value for MIDI 2.0
-        
-        System.BitConverter.GetBytes(word1).CopyTo(ump, 0);
-        System.BitConverter.GetBytes(word2).CopyTo(ump, 4);
 
-        netUMP.SendUMP(ump);
+        uint word1 = (4u << 28)            // MT = 4
+                | (0u << 24)            // Group = 0
+                | (0xBu << 20)          // Message Type = Control Change (B)
+                | ((uint)channel << 16)
+                | controller;           // Controller number
+
+        uint word2 = value;                // 32-bit 14-bit or 32-bit value depending on controller
+
+        BitConverter.GetBytes(word1).CopyTo(ump, 0);
+        BitConverter.GetBytes(word2).CopyTo(ump, 4);
+
+        if (netUMP.SendUMP(ump))
+            Debug.Log($"Sent Control Change: Ch={channel}, Ctrl={controller}, Value={value}");
+        else
+            Debug.LogWarning("Failed to send Control Change");
     }
+
 
     #endregion
 

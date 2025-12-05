@@ -110,20 +110,19 @@ namespace NetUMP
         private byte[] receiveBuffer = new byte[16]; // Max UMP message size
 
         // Keep delegates alive to prevent garbage collection
-        private UMPMessageCallbackDelegate messageCallbackDelegate;
-        private ConnectionEventCallbackDelegate connectionCallbackDelegate;
-        private DisconnectionEventCallbackDelegate disconnectionCallbackDelegate;
+        private static UMPMessageCallbackDelegate messageCallbackDelegate;
+        private static ConnectionEventCallbackDelegate connectionCallbackDelegate;
+        private static DisconnectionEventCallbackDelegate disconnectionCallbackDelegate;
 
         #endregion
 
         #region Unity Lifecycle
 
-        private void Awake()
+        private static void Awake()  // Make static or call from static context
         {
-            // Create and store delegates to prevent GC
-            messageCallbackDelegate = OnNativeMessageReceived;
-            connectionCallbackDelegate = OnNativeConnected;
-            disconnectionCallbackDelegate = OnNativeDisconnected;
+            messageCallbackDelegate ??= OnNativeMessageReceived;
+            connectionCallbackDelegate ??= OnNativeConnected;
+            disconnectionCallbackDelegate ??= OnNativeDisconnected;
         }
 
         private void Start()
@@ -200,9 +199,12 @@ namespace NetUMP
             NetUMP_SetConnectionCallback(nativeLocalInstance, connectionCallbackDelegate);
             NetUMP_SetDisconnectionCallback(nativeLocalInstance, disconnectionCallbackDelegate);
 
-            Debug.Log($"[{gameObject.name}] NetUMP: Starting connection to {remoteHost}:{remotePort}");
+            Debug.Log($"[{gameObject.name}] NetUMP: Init successfully");
+            return true;
 
-            // Start session
+            /*
+            Debug.Log($"[{gameObject.name}] NetUMP: Starting connection to {remoteHost}:{remotePort}");
+            // Start sessions
             int result = NetUMP_Start(
                 nativeLocalInstance,
                 remoteHost,
@@ -220,6 +222,42 @@ namespace NetUMP
 
             isRunning = true;
             Debug.Log($"[{gameObject.name}] NetUMP: Initialized successfully");
+            return true;
+            */
+        }
+
+        /// <summary>
+        /// Start Session
+        /// </summary>
+        /// 
+        ///         
+        public bool StartSession()
+        {
+            if (nativeLocalInstance == IntPtr.Zero) {
+                Debug.LogError($"[{gameObject.name}] NetUMP: Not initialized");
+                return false;
+            }
+
+            Debug.Log($"[{gameObject.name}] NetUMP: Starting connection to {remoteHost}:{remotePort}");
+            
+            // Start session
+            int result = NetUMP_Start(
+                nativeLocalInstance,
+                remoteHost,
+                localPort,
+                remotePort,
+                isInitiator);
+
+            if (result < 0)
+            {
+                Debug.LogError($"[{gameObject.name}] NetUMP: Start failed with code {result}");
+                NetUMP_Destroy(nativeLocalInstance);
+                nativeLocalInstance = IntPtr.Zero;
+                return false;
+            }
+
+            isRunning = true;
+            Debug.Log($"[{gameObject.name}] NetUMP: Started successfully");
             return true;
         }
 
@@ -333,6 +371,7 @@ namespace NetUMP
 
         #region Native Callbacks
 
+        [AOT.MonoPInvokeCallback(typeof(UMPMessageCallbackDelegate))]
         private void OnNativeMessageReceived(IntPtr instance, IntPtr data, int length)
         {
             // Verify this callback is for our instance
@@ -343,6 +382,7 @@ namespace NetUMP
             // Actual processing happens in Update() via polling
         }
 
+        [AOT.MonoPInvokeCallback(typeof(ConnectionEventCallbackDelegate))]
         private void OnNativeConnected(IntPtr instance, IntPtr endpointName, int nameLength)
         {
             // Verify this callback is for our instance
@@ -363,6 +403,7 @@ namespace NetUMP
             }
         }
 
+        [AOT.MonoPInvokeCallback(typeof(DisconnectionEventCallbackDelegate))]
         private void OnNativeDisconnected(IntPtr instance)
         {
             // Verify this callback is for our instance

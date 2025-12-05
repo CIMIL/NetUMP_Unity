@@ -92,10 +92,10 @@ void NativeUMPCallback(void *userInstance, uint32_t *packet)
     }
 
     // Also call direct callback if set
-    if (wrapper->messageCallback != nullptr)
-    {
-        wrapper->messageCallback(wrapper, msg.data, msg.length);
-    }
+    // if (wrapper->messageCallback != nullptr)
+    // {
+    //     wrapper->messageCallback(wrapper, msg.data, msg.length);
+    // }
 }
 
 // Connection callback wrapper
@@ -194,31 +194,31 @@ NETUMP_EXPORT int NetUMP_Start(
     wrapper->handler->SetProductInstanceID(wrapper->productInstanceId);
 
     // Set connection/disconnection callbacks with lambda wrappers
-    wrapper->handler->SetConnectionCallback(
-        [](const char* endpointName, unsigned int size) {
-            // Find which instance this callback belongs to by checking all handlers
-            std::lock_guard<std::mutex> lock(g_instancesMutex);
-            for (auto& pair : g_instances) {
-                if (pair.second->handler) {
-                    // We need to store instance pointer somewhere accessible
-                    // For now, we'll call all registered callbacks
-                    NativeConnectionCallback(pair.second, endpointName, size);
-                }
-            }
-        }
-    );
+    // wrapper->handler->SetConnectionCallback(
+    //     [](const char* endpointName, unsigned int size) {
+    //         // Find which instance this callback belongs to by checking all handlers
+    //         std::lock_guard<std::mutex> lock(g_instancesMutex);
+    //         for (auto& pair : g_instances) {
+    //             if (pair.second->handler) {
+    //                 // We need to store instance pointer somewhere accessible
+    //                 // For now, we'll call all registered callbacks
+    //                 NativeConnectionCallback(pair.second, endpointName, size);
+    //             }
+    //         }
+    //     }
+    // );
     
-    wrapper->handler->SetDisconnectCallback(
-        []() {
-            // Similar issue - call all disconnection callbacks
-            std::lock_guard<std::mutex> lock(g_instancesMutex);
-            for (auto& pair : g_instances) {
-                if (pair.second->handler) {
-                    NativeDisconnectionCallback(pair.second);
-                }
-            }
-        }
-    );
+    // wrapper->handler->SetDisconnectCallback(
+    //     []() {
+    //         // Similar issue - call all disconnection callbacks
+    //         std::lock_guard<std::mutex> lock(g_instancesMutex);
+    //         for (auto& pair : g_instances) {
+    //             if (pair.second->handler) {
+    //                 NativeDisconnectionCallback(pair.second);
+    //             }
+    //         }
+    //     }
+    // );
 
     // Convert remote host to IP
     unsigned int destIP = ntohl(inet_addr(remoteHost));
@@ -235,6 +235,7 @@ NETUMP_EXPORT int NetUMP_Start(
     // Start session thread
     wrapper->running.store(true, std::memory_order_release);
     wrapper->sessionThread = std::thread(SessionThread, wrapper);
+    wrapper->sessionThread.detach(); // 
 
     return 0;
 }

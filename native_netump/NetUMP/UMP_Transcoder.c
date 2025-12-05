@@ -237,7 +237,7 @@ unsigned int TranscodeUMP_MIDI1 (uint32_t* SourceUMP, uint8_t* MIDIMsg)
 		return 0;		// This should normally never happen
 	}
 	
-	// Single 7-bit SYSEX packet
+	// MT=3 for single 7-bit SYSEX packet
 	if ((SourceUMP[0] & 0xF0F00000) == 0x30000000)
 	{
 		SYSEXLen = (SourceUMP[0] >> 16) & 0x0F;
